@@ -5,12 +5,16 @@ inputs:
     description: 'Comma separated list of labels to copy (all if empty)'
     required: true
     default: ''
+  addional-labels: 
+    description: 'Comma separated list of additional labels to add to the merge queue PR'
+    required: false
+    default: ''
 runs:
   using: "composite"
   steps:
     - name: Copying labels
       shell: bash
-      if: startsWith('mergify/merge-queue/', github.head_ref)
+      if: startsWith(github.head_ref, 'mergify/merge-queue/')
       env:
         REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
         MERGE_QUEUE_PR_URL: ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
@@ -20,6 +24,9 @@ runs:
           gh pr view --json labels -q '.labels[]|.name' ${REPOSITORY_URL}/pull/$pr_number | while read label ; do
             if [[ -z "$labels" ]] || [[ ",$labels," =~ ",$label," ]]; then
               gh pr edit --add-label "$label" $MERGE_QUEUE_PR_URL
-            if
+            fi
+          done
+          for additional-label in $(echo $additional-labels | sed "s/,/ /g") ; do
+            gh pr edit --add-label "$additional-label" $MERGE_QUEUE_PR_URL
           done
         done
